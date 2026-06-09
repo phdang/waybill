@@ -30,17 +30,25 @@ export function getLocalDateString(date: Date = new Date()): string {
  */
 export function formatDateTime(date: Date | string | null | undefined): string {
   if (!date) return "N/A";
-  
-  const dateObj = new Date(date)
 
-  return dateObj.toLocaleString("vi-VN", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+  // Nếu là Date Object (ví dụ từ thư viện khác), chuyển về chuỗi format ISO local
+  const dateStr = date instanceof Date 
+    ? date.toLocaleString("sv-SE") // Trả về dạng YYYY-MM-DD HH:mm:ss
+    : date;
+
+  try {
+    // Regex để bắt các nhóm: năm, tháng, ngày, giờ, phút, giây
+    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})/);
+    
+    if (!match) return "N/A";
+
+    const [, year, month, day, hour, minute, second] = match;
+
+    // Trả về đúng format bạn muốn: HH:mm:ss dd/MM/yyyy
+    return `${hour}:${minute}:${second} ${day}/${month}/${year}`;
+  } catch (e) {
+    return "N/A";
+  }
 }
 
 const CATEGORY_EMOJIS: Record<string, string> = {
