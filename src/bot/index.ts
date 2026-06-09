@@ -399,6 +399,7 @@ export function startDiscordBot() {
 
           await message.reply(
             `💸 **Đã ghi nhận chi tiêu!**\n` +
+            `• ID: **${expense.id}**\n` +
             `• Nội dung: **${expense.description}**\n` +
             `• Chi phí: **${formatCurrency(expense.amount, expense.currency)}**\n` +
             `• Phân loại: **${expense.category.toUpperCase()}**\n` +
