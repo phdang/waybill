@@ -45,8 +45,78 @@ export const commands = [
         .addStringOption(opt =>
           opt.setName("id").setDescription("ID chuyến đi (để trống nếu muốn xem chuyến đi hiện tại)").setRequired(false)
         )
+    ),
+
+  new SlashCommandBuilder()
+    .setName("expense")
+    .setDescription("Quản lý chi tiêu (Expense Management)")
+    .addSubcommand(sub =>
+      sub
+        .setName("view")
+        .setDescription("Xem chi tiết một khoản chi tiêu và danh sách ảnh đính kèm")
+        .addStringOption(opt =>
+          opt.setName("id").setDescription("ID của khoản chi tiêu").setRequired(true)
+        )
     )
+    .addSubcommand(sub =>
+      sub
+        .setName("edit")
+        .setDescription("Chỉnh sửa thông tin một khoản chi tiêu")
+        .addStringOption(opt =>
+          opt.setName("id").setDescription("ID của khoản chi tiêu cần sửa").setRequired(true)
+        )
+        .addNumberOption(opt =>
+          opt.setName("amount").setDescription("Số tiền mới").setRequired(false)
+        )
+        .addStringOption(opt =>
+          opt.setName("currency").setDescription("Đơn vị tiền tệ mới (ví dụ: VND, JPY)").setRequired(false)
+        )
+        .addStringOption(opt =>
+          opt.setName("category")
+            .setDescription("Phân loại mới")
+            .setRequired(false)
+            .addChoices(
+              { name: "🍴 Food (Ăn uống)", value: "food" },
+              { name: "🏨 Hotel (Khách sạn)", value: "hotel" },
+              { name: "🚗 Transport (Di chuyển)", value: "transport" },
+              { name: "🎟️ Ticket (Vé)", value: "ticket" },
+              { name: "🛍️ Shopping (Mua sắm)", value: "shopping" },
+              { name: "🎉 Entertainment (Giải trí)", value: "entertainment" },
+              { name: "💊 Medical (Y tế)", value: "medical" },
+              { name: "📦 Other (Khác)", value: "other" },
+            )
+        )
+        .addStringOption(opt =>
+          opt.setName("description").setDescription("Mô tả mới cho khoản chi tiêu").setRequired(false)
+        )
+        .addStringOption(opt =>
+          opt.setName("note").setDescription("Ghi chú thêm").setRequired(false)
+        )
+        .addStringOption(opt =>
+          opt.setName("date").setDescription("Ngày chi tiêu mới (định dạng YYYY-MM-DD, ví dụ: 2026-06-09)").setRequired(false)
+        )
+    )
+    .addSubcommand(sub =>
+      sub
+        .setName("delete")
+        .setDescription("Xóa một khoản chi tiêu (và toàn bộ ảnh đính kèm)")
+        .addStringOption(opt =>
+          opt.setName("id").setDescription("ID của khoản chi tiêu cần xóa").setRequired(true)
+        )
+    )
+    .addSubcommand(sub =>
+      sub
+        .setName("attach")
+        .setDescription("Thêm ảnh bổ sung vào khoản chi tiêu (ảnh địa điểm, ảnh kỷ niệm, v.v.)")
+        .addStringOption(opt =>
+          opt.setName("id").setDescription("ID của khoản chi tiêu").setRequired(true)
+        )
+        .addAttachmentOption(opt =>
+          opt.setName("image").setDescription("Ảnh muốn đính kèm (JPG, PNG, WEBP)").setRequired(true)
+        )
+    ),
 ];
+
 
 export async function deployCommands(token: string, clientId: string) {
   const rest = new REST({ version: "10" }).setToken(token);

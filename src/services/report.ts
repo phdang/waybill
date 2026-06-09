@@ -25,6 +25,21 @@ export function getLocalDateString(date: Date = new Date()): string {
   return localTime.toISOString().split("T")[0];
 }
 
+/**
+ * Formats a Date (or ISO string / timestamp) to full dd/mm/yyyy HH:mm:ss in vi-VN locale.
+ */
+export function formatDateTime(date: Date | string | null | undefined): string {
+  if (!date) return "N/A";
+  return new Date(date).toLocaleString("vi-VN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
 const CATEGORY_EMOJIS: Record<string, string> = {
   food: "🍴 Food",
   hotel: "🏨 Hotel",
@@ -69,13 +84,14 @@ export class ReportingService {
       if (!categoryTotals[cat]) categoryTotals[cat] = {};
       categoryTotals[cat][cur] = (categoryTotals[cat][cur] || 0) + amt;
 
-      // Line item text – show full HH:mm:ss timestamp
+      // Line item text – show full HH:mm:ss timestamp + short expense ID
       const timeStr = new Date(item.createdAt).toLocaleTimeString("vi-VN", {
         hour: "2-digit",
         minute: "2-digit",
         second: "2-digit",
       });
-      listText += `• [${timeStr}] **${CATEGORY_EMOJIS[cat] || cat}** - ${item.description}: **${formatCurrency(amt, cur)}**${item.note ? ` (*${item.note}*)` : ""}\n`;
+      const shortId = item.id.slice(-8);
+      listText += `• [${timeStr}] **${CATEGORY_EMOJIS[cat] || cat}** - ${item.description}: **${formatCurrency(amt, cur)}**${item.note ? ` (*${item.note}*)` : ""} \`…${shortId}\`\n`;
     }
 
     // Compile totals text
@@ -123,10 +139,10 @@ export class ReportingService {
 
     const tripHeader = `✈️ **Báo cáo chuyến đi: ${targetTrip.name}**\n` +
       `• ID: \`${targetTrip.id}\`\n` +
-      `• Quốc gia: ${targetTrip.country || "Chưa thiết lập"}\n` +
-      `• Bắt đầu: ${targetTrip.startedAt ? new Date(targetTrip.startedAt).toLocaleDateString("vi-VN") : "N/A"}\n` +
+      `• Quốc gia: ${targetTrip.country || "Chưa thiết lập"} | Tiền tệ: ${targetTrip.baseCurrency || "VND"}\n` +
+      `• Bắt đầu: ${formatDateTime(targetTrip.startedAt)}\n` +
       `• Trạng thái: ${targetTrip.status === "active" ? "🟢 Đang diễn ra" : "🔴 Đã kết thúc"}\n` +
-      (targetTrip.endedAt ? `• Kết thúc: ${new Date(targetTrip.endedAt).toLocaleDateString("vi-VN")}\n` : "");
+      (targetTrip.endedAt ? `• Kết thúc: ${formatDateTime(targetTrip.endedAt)}\n` : "");
 
     if (items.length === 0) {
       return `${tripHeader}\nChưa có chi tiêu nào được ghi nhận cho chuyến đi này.`;
@@ -149,9 +165,10 @@ export class ReportingService {
       if (!categoryTotals[cat]) categoryTotals[cat] = {};
       categoryTotals[cat][cur] = (categoryTotals[cat][cur] || 0) + amt;
 
-      // Line item text – show full date + HH:mm:ss timestamp
+      // Line item text – show full date + HH:mm:ss timestamp + short expense ID
       const expenseDateTimeStr = `${item.expenseDate} ${new Date(item.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
-      listText += `• [${expenseDateTimeStr}] **${CATEGORY_EMOJIS[cat] || cat}** - ${item.description}: **${formatCurrency(amt, cur)}**${item.note ? ` (*${item.note}*)` : ""}\n`;
+      const shortId = item.id.slice(-8);
+      listText += `• [${expenseDateTimeStr}] **${CATEGORY_EMOJIS[cat] || cat}** - ${item.description}: **${formatCurrency(amt, cur)}**${item.note ? ` (*${item.note}*)` : ""} \`…${shortId}\`\n`;
     }
 
     // Compile totals text

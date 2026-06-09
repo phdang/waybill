@@ -2,7 +2,7 @@ import { Client, GatewayIntentBits, Partials, ActivityType } from "discord.js";
 import { logger } from "../logger";
 import { deployCommands } from "./commands";
 import { ExpenseService } from "../services/expense";
-import { ReportingService, formatCurrency } from "../services/report";
+import { ReportingService, formatCurrency, formatDateTime } from "../services/report";
 import { AIService } from "../services/ai";
 import * as fs from "fs";
 import * as path from "path";
@@ -142,6 +142,156 @@ export function startDiscordBot() {
           const tripId = options.getString("id") || undefined;
           const report = await ReportingService.getTripReport(tripId);
           await interaction.editReply(report);
+        }
+      }
+
+      else if (commandName === "expense") {
+        const subcommand = options.getSubcommand();
+        await interaction.deferReply();
+
+        // ── VIEW ──────────────────────────────────────────────────────────
+        if (subcommand === "view") {
+          const id = options.getString("id", true).trim();
+          const expense = await ExpenseService.getExpenseById(id);
+
+          if (!expense) {
+            await interaction.editReply(`⚠️ Không tìm thấy chi tiêu với ID: \`${id}\``);
+            return;
+          }
+
+          const attList = await ExpenseService.getAttachmentsByExpense(id);
+          const attText = attList.length > 0
+            ? attList.map((a, i) =>
+                `  ${i + 1}. \`${a.storageKey}\` — ${a.mimeType} — ${formatDateTime(a.createdAt)}`
+              ).join("\n")
+            : "  _(Chưa có ảnh đính kèm)_";
+
+          await interaction.editReply(
+            `🧾 **Chi tiết khoản chi tiêu**\n` +
+            `• ID: \`${expense.id}\`\n` +
+            `• Mô tả: **${expense.description}**\n` +
+            `• Số tiền: **${formatCurrency(expense.amount, expense.currency)}**\n` +
+            `• Phân loại: **${expense.category.toUpperCase()}**\n` +
+            `• Ngày: **${expense.expenseDate}**\n` +
+            `• Ghi chú: ${expense.note || "_(không có)_"}\n` +
+            `• Nguồn: ${expense.sourceType}\n` +
+            `• Tạo lúc: ${formatDateTime(expense.createdAt)}\n\n` +
+            `📎 **Ảnh đính kèm (${attList.length}):**\n${attText}`
+          );
+        }
+
+        // ── EDIT ──────────────────────────────────────────────────────────
+        else if (subcommand === "edit") {
+          const id = options.getString("id", true).trim();
+          const existing = await ExpenseService.getExpenseById(id);
+
+          if (!existing) {
+            await interaction.editReply(`⚠️ Không tìm thấy chi tiêu với ID: \`${id}\``);
+            return;
+          }
+
+          const amountRaw = options.getNumber("amount");
+          const currency  = options.getString("currency") || undefined;
+          const category  = options.getString("category") as any || undefined;
+          const description = options.getString("description") || undefined;
+          const note      = options.getString("note") || undefined;
+          const date      = options.getString("date") || undefined;
+
+          // Validate date format
+          if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+            await interaction.editReply(`❌ Định dạng ngày không hợp lệ. Vui lòng dùng YYYY-MM-DD (ví dụ: 2026-06-09).`);
+            return;
+          }
+
+          const updated = await ExpenseService.updateExpense(id, {
+            amount: amountRaw ?? undefined,
+            currency,
+            category,
+            description,
+            note,
+            expenseDate: date,
+          });
+
+          if (!updated) {
+            await interaction.editReply(`❌ Không thể cập nhật chi tiêu \`${id}\`.`);
+            return;
+          }
+
+          await interaction.editReply(
+            `✏️ **Đã cập nhật khoản chi tiêu!**\n` +
+            `• ID: \`${updated.id}\`\n` +
+            `• Mô tả: **${updated.description}**\n` +
+            `• Số tiền: **${formatCurrency(updated.amount, updated.currency)}**\n` +
+            `• Phân loại: **${updated.category.toUpperCase()}**\n` +
+            `• Ngày: **${updated.expenseDate}**\n` +
+            `• Ghi chú: ${updated.note || "_(không có)_"}`
+          );
+        }
+
+        // ── DELETE ────────────────────────────────────────────────────────
+        else if (subcommand === "delete") {
+          const id = options.getString("id", true).trim();
+          const existing = await ExpenseService.getExpenseById(id);
+
+          if (!existing) {
+            await interaction.editReply(`⚠️ Không tìm thấy chi tiêu với ID: \`${id}\``);
+            return;
+          }
+
+          const { deleted, storageKeys } = await ExpenseService.deleteExpense(id);
+
+          if (!deleted) {
+            await interaction.editReply(`❌ Không thể xóa chi tiêu \`${id}\`.`);
+            return;
+          }
+
+          const attachInfo = storageKeys.length > 0
+            ? ` (và ${storageKeys.length} ảnh đính kèm)`
+            : "";
+
+          await interaction.editReply(
+            `🗑️ **Đã xóa khoản chi tiêu${attachInfo}!**\n` +
+            `• ID: \`${id}\`\n` +
+            `• Mô tả: ${existing.description}\n` +
+            `• Số tiền: ${formatCurrency(existing.amount, existing.currency)}`
+          );
+        }
+
+        // ── ATTACH ───────────────────────────────────────────────────────
+        else if (subcommand === "attach") {
+          const id = options.getString("id", true).trim();
+          const imageAttachment = options.getAttachment("image", true);
+
+          const existing = await ExpenseService.getExpenseById(id);
+          if (!existing) {
+            await interaction.editReply(`⚠️ Không tìm thấy chi tiêu với ID: \`${id}\``);
+            return;
+          }
+
+          const mimeType = imageAttachment.contentType || "image/jpeg";
+          if (!mimeType.startsWith("image/")) {
+            await interaction.editReply(`❌ Tệp đính kèm phải là ảnh (JPG, PNG, WEBP).`);
+            return;
+          }
+
+          // Download the image
+          const downloadRes = await fetch(imageAttachment.url);
+          if (!downloadRes.ok) {
+            throw new Error(`Failed to download attachment: ${downloadRes.statusText}`);
+          }
+          const buffer = Buffer.from(await downloadRes.arrayBuffer());
+
+          const storageKey = await saveAttachmentSafely(buffer, imageAttachment.name, mimeType);
+          const saved = await ExpenseService.addAttachment(id, storageKey, mimeType);
+
+          await interaction.editReply(
+            `📎 **Đã đính kèm ảnh vào chi tiêu!**\n` +
+            `• Chi tiêu: **${existing.description}** (\`${id}\`)\n` +
+            `• File: \`${storageKey}\`\n` +
+            `• Loại: ${mimeType}\n` +
+            `• Thêm lúc: ${formatDateTime(saved.createdAt)}\n\n` +
+            `_Dùng \`/expense view id:${id}\` để xem danh sách toàn bộ ảnh._`
+          );
         }
       }
     } catch (err: any) {

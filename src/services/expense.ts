@@ -20,6 +20,15 @@ export interface CreateExpenseInput {
   tripId?: string;
 }
 
+export interface UpdateExpenseInput {
+  amount?: number;
+  currency?: string;
+  category?: "food" | "hotel" | "transport" | "ticket" | "shopping" | "entertainment" | "medical" | "other";
+  description?: string;
+  note?: string;
+  expenseDate?: string; // YYYY-MM-DD
+}
+
 export class ExpenseService {
   /**
    * Starts a new trip. Ends any currently active trips.
@@ -153,6 +162,73 @@ export class ExpenseService {
   }
 
   /**
+   * Retrieves a single expense by ID.
+   */
+  public static async getExpenseById(id: string) {
+    const [expense] = await db
+      .select()
+      .from(expenses)
+      .where(eq(expenses.id, id))
+      .limit(1);
+    return expense || null;
+  }
+
+  /**
+   * Updates fields of an existing expense.
+   */
+  public static async updateExpense(id: string, input: UpdateExpenseInput) {
+    const updateData: Record<string, any> = {};
+    if (input.amount !== undefined) updateData.amount = input.amount.toString();
+    if (input.currency !== undefined) updateData.currency = input.currency.toUpperCase();
+    if (input.category !== undefined) updateData.category = input.category;
+    if (input.description !== undefined) updateData.description = input.description;
+    if (input.note !== undefined) updateData.note = input.note;
+    if (input.expenseDate !== undefined) updateData.expenseDate = input.expenseDate;
+
+    if (Object.keys(updateData).length === 0) {
+      return this.getExpenseById(id);
+    }
+
+    const [updated] = await db
+      .update(expenses)
+      .set(updateData)
+      .where(eq(expenses.id, id))
+      .returning();
+
+    if (!updated) return null;
+
+    logger.info({ event: "expense_updated", expenseId: id, fields: Object.keys(updateData) }, "Updated expense entry");
+    return updated;
+  }
+
+  /**
+   * Deletes an expense and all its attachments by ID.
+   */
+  public static async deleteExpense(id: string): Promise<{ deleted: boolean; storageKeys: string[] }> {
+    // Collect attachment storage keys before deletion (for optional file cleanup)
+    const existingAttachments = await db
+      .select()
+      .from(attachments)
+      .where(eq(attachments.expenseId, id));
+
+    const storageKeys = existingAttachments.map(a => a.storageKey);
+
+    // Delete attachments first (FK constraint)
+    if (existingAttachments.length > 0) {
+      await db.delete(attachments).where(eq(attachments.expenseId, id));
+    }
+
+    const result = await db.delete(expenses).where(eq(expenses.id, id)).returning();
+    const deleted = result.length > 0;
+
+    if (deleted) {
+      logger.info({ event: "expense_deleted", expenseId: id, attachmentsRemoved: storageKeys.length }, "Deleted expense entry");
+    }
+
+    return { deleted, storageKeys };
+  }
+
+  /**
    * Links a file attachment to an expense
    */
   public static async addAttachment(expenseId: string, storageKey: string, mimeType: string) {
@@ -167,6 +243,17 @@ export class ExpenseService {
 
     logger.info({ attachmentId: newAttachment.id, expenseId, storageKey }, "Saved expense attachment reference");
     return newAttachment;
+  }
+
+  /**
+   * Retrieves all attachments for a given expense.
+   */
+  public static async getAttachmentsByExpense(expenseId: string) {
+    return db
+      .select()
+      .from(attachments)
+      .where(eq(attachments.expenseId, expenseId))
+      .orderBy(attachments.createdAt);
   }
 
   /**
