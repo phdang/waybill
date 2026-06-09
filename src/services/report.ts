@@ -69,10 +69,11 @@ export class ReportingService {
       if (!categoryTotals[cat]) categoryTotals[cat] = {};
       categoryTotals[cat][cur] = (categoryTotals[cat][cur] || 0) + amt;
 
-      // Line item text
+      // Line item text – show full HH:mm:ss timestamp
       const timeStr = new Date(item.createdAt).toLocaleTimeString("vi-VN", {
         hour: "2-digit",
         minute: "2-digit",
+        second: "2-digit",
       });
       listText += `• [${timeStr}] **${CATEGORY_EMOJIS[cat] || cat}** - ${item.description}: **${formatCurrency(amt, cur)}**${item.note ? ` (*${item.note}*)` : ""}\n`;
     }
@@ -121,6 +122,7 @@ export class ReportingService {
       .orderBy(expenses.expenseDate);
 
     const tripHeader = `✈️ **Báo cáo chuyến đi: ${targetTrip.name}**\n` +
+      `• ID: \`${targetTrip.id}\`\n` +
       `• Quốc gia: ${targetTrip.country || "Chưa thiết lập"}\n` +
       `• Bắt đầu: ${targetTrip.startedAt ? new Date(targetTrip.startedAt).toLocaleDateString("vi-VN") : "N/A"}\n` +
       `• Trạng thái: ${targetTrip.status === "active" ? "🟢 Đang diễn ra" : "🔴 Đã kết thúc"}\n` +
@@ -147,8 +149,9 @@ export class ReportingService {
       if (!categoryTotals[cat]) categoryTotals[cat] = {};
       categoryTotals[cat][cur] = (categoryTotals[cat][cur] || 0) + amt;
 
-      // Line item text
-      listText += `• [${item.expenseDate}] **${CATEGORY_EMOJIS[cat] || cat}** - ${item.description}: **${formatCurrency(amt, cur)}**${item.note ? ` (*${item.note}*)` : ""}\n`;
+      // Line item text – show full date + HH:mm:ss timestamp
+      const expenseDateTimeStr = `${item.expenseDate} ${new Date(item.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
+      listText += `• [${expenseDateTimeStr}] **${CATEGORY_EMOJIS[cat] || cat}** - ${item.description}: **${formatCurrency(amt, cur)}**${item.note ? ` (*${item.note}*)` : ""}\n`;
     }
 
     // Compile totals text
@@ -170,5 +173,47 @@ export class ReportingService {
       `### Danh sách chi tiêu:\n${listText}\n` +
       `### Phân loại:\n${categoryText}\n` +
       `### Tổng kết chi phí chuyến đi:\n${totalsText}`;
+  }
+
+  /**
+   * Compiles a summary list of all trips with IDs and key metadata
+   */
+  public static async getAllTripsReport(): Promise<string> {
+    const allTrips = await db
+      .select()
+      .from(trips)
+      .orderBy(desc(trips.createdAt));
+
+    if (allTrips.length === 0) {
+      return "📋 **Danh sách chuyến đi**\n\nChưa có chuyến đi nào được tạo.";
+    }
+
+    let listText = "";
+    for (const trip of allTrips) {
+      const statusIcon = trip.status === "active" ? "🟢" : "🔴";
+      const startStr = trip.startedAt
+        ? new Date(trip.startedAt).toLocaleString("vi-VN", {
+            year: "numeric", month: "2-digit", day: "2-digit",
+            hour: "2-digit", minute: "2-digit", second: "2-digit",
+          })
+        : "N/A";
+      const endStr = trip.endedAt
+        ? new Date(trip.endedAt).toLocaleString("vi-VN", {
+            year: "numeric", month: "2-digit", day: "2-digit",
+            hour: "2-digit", minute: "2-digit", second: "2-digit",
+          })
+        : null;
+
+      listText +=
+        `${statusIcon} **${trip.name}**\n` +
+        `  • ID: \`${trip.id}\`\n` +
+        `  • Quốc gia: ${trip.country || "Chưa thiết lập"} | Tiền tệ: ${trip.baseCurrency}\n` +
+        `  • Bắt đầu: ${startStr}\n` +
+        (endStr ? `  • Kết thúc: ${endStr}\n` : "") +
+        "\n";
+    }
+
+    return `📋 **Danh sách chuyến đi (${allTrips.length} chuyến)**\n\n${listText}` +
+      `> Dùng \`/trip list\` để xem, \`/report trip id:<ID>\` để xem chi tiết chi tiêu theo ID.`;
   }
 }

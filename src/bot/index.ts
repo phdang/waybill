@@ -124,6 +124,10 @@ export function startDiscordBot() {
           } else {
             await interaction.editReply(`🔴 **Đã kết thúc chuyến đi: ${trip.name}!**`);
           }
+        } else if (subcommand === "list") {
+          await interaction.deferReply();
+          const report = await ReportingService.getAllTripsReport();
+          await interaction.editReply(report);
         }
       }
 

@@ -42,6 +42,16 @@ function handleError(res: express.Response, error: any, customMsg: string, statu
 
 // REST API Endpoints
 
+// 0. List all trips
+app.get("/trips", async (req, res) => {
+  try {
+    const allTrips = await ExpenseService.getAllTrips();
+    res.json({ success: true, trips: allTrips });
+  } catch (err: any) {
+    handleError(res, err, "Failed to list trips through API");
+  }
+});
+
 // 1. Create a trip
 app.post("/trips", async (req, res) => {
   try {

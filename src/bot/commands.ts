@@ -23,6 +23,11 @@ export const commands = [
       sub
         .setName("end")
         .setDescription("Kết thúc chuyến đi hiện tại")
+    )
+    .addSubcommand(sub =>
+      sub
+        .setName("list")
+        .setDescription("Liệt kê tất cả các chuyến đi (kèm ID)")
     ),
 
   new SlashCommandBuilder()

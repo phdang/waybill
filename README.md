@@ -11,14 +11,16 @@ Dự án sử dụng **PostgreSQL** để lưu trữ dữ liệu, **Drizzle ORM*
 ### 1. Quản lý chuyến đi (Trip Management)
 - Bắt đầu một chuyến đi mới (Ví dụ: `japan-2026`). Khi bắt đầu chuyến đi mới, bot sẽ tự động đánh dấu hoàn thành chuyến đi cũ.
 - Kết thúc chuyến đi hiện tại.
+- **Liệt kê tất cả chuyến đi** (kèm ID đầy đủ và thời gian bắt đầu/kết thúc chính xác đến giờ:phút:giây).
 
 ### 2. Ghi nhận chi tiêu thông minh (AI Mode)
 - **Bằng văn bản tự do**: Không cần nhập lệnh phức tạp, chỉ cần gõ nội dung như `Ăn sáng bún bò 120k`, `Taxi đi sân bay 250k`, hoặc `Vé Disney 1800 JPY`. AI sẽ tự động phân tích để trích xuất: số tiền, loại tiền tệ, phân loại (Category) và ngày chi tiêu.
 - **Bằng ảnh hóa đơn (OCR Receipts)**: Tải trực tiếp ảnh hóa đơn/biên lai lên Discord hoặc qua API. AI Vision sẽ quét ảnh hóa đơn, đọc số tiền, loại tiền tệ và lưu trữ tệp tin hóa đơn một cách bảo mật trên máy chủ local (`storage/receipts/`).
 
 ### 3. Báo cáo chi tiết (Reporting)
-- Xem chi tiết danh sách chi tiêu và phân loại trong ngày (`/report today`).
-- Xem báo cáo tổng hợp chi phí của chuyến đi hiện tại (`/report trip`).
+- Xem chi tiết danh sách chi tiêu và phân loại trong ngày (`/report today`) — thời gian hiển thị chính xác đến **giờ:phút:giây**.
+- Xem báo cáo tổng hợp chi phí của chuyến đi hiện tại (`/report trip`) — thời gian mỗi khoản chi tiêu hiển thị đầy đủ **ngày + giờ:phút:giây**.
+- Thông tin báo cáo chuyến đi luôn bao gồm **ID của trip** để tiện tra cứu.
 - Hỗ trợ báo cáo **đa tiền tệ**: Các khoản chi tiêu bằng các đồng tiền khác nhau (ví dụ: VND, JPY, USD) sẽ được gom nhóm và tính tổng riêng biệt cho từng loại tiền, giúp quản lý chính xác hơn.
 
 ### 4. REST API cho Nhà phát triển
@@ -93,8 +95,9 @@ npm start
 - `/trip start name:<tên_chuyến_đi> country:<quốc_gia> currency:<tiền_tệ_cơ_sở>`: Bắt đầu chuyến đi mới.
   - *Ví dụ:* `/trip start name:japan-2026 country:Japan currency:JPY`
 - `/trip end`: Kết thúc chuyến đi đang hoạt động.
-- `/report today`: Hiển thị báo cáo chi tiêu ngày hôm nay.
-- `/report trip id:<trip_id_tùy_chọn>`: Xem báo cáo của chuyến đi hiện tại (hoặc điền ID để xem chuyến đi cũ).
+- `/trip list`: **Liệt kê tất cả các chuyến đi** — hiển thị ID, tên, quốc gia, tiền tệ, trạng thái và thời gian bắt đầu/kết thúc chính xác đến giờ:phút:giây.
+- `/report today`: Hiển thị báo cáo chi tiêu ngày hôm nay (thời gian mỗi khoản chính xác đến **giờ:phút:giây**).
+- `/report trip id:<trip_id_tùy_chọn>`: Xem báo cáo của chuyến đi hiện tại (hoặc điền ID để xem chuyến đi cũ). Báo cáo bao gồm **ID trip** và thời gian chi tiêu đến **ngày + giờ:phút:giây**.
 
 #### 2. Chat tự do (AI Mode)
 Chỉ cần nhắn tin trực tiếp trong kênh chat mà bot đang lắng nghe.
@@ -111,6 +114,27 @@ Chỉ cần nhắn tin trực tiếp trong kênh chat mà bot đang lắng nghe.
 ### B. Qua REST API
 
 Mọi API đều lắng nghe mặc định trên localhost (`http://127.0.0.1:5600` hoặc cổng được định nghĩa trong `.env`).
+
+#### 0. Lấy danh sách tất cả chuyến đi (kèm ID)
+- **Endpoint**: `GET /trips`
+- **Phản hồi** (ví dụ):
+```json
+{
+  "success": true,
+  "trips": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "name": "japan-2026",
+      "country": "Japan",
+      "baseCurrency": "JPY",
+      "status": "active",
+      "startedAt": "2026-06-01T08:00:00.000Z",
+      "endedAt": null,
+      "createdAt": "2026-06-01T08:00:00.000Z"
+    }
+  ]
+}
+```
 
 #### 1. Tạo chuyến đi
 - **Endpoint**: `POST /trips`
