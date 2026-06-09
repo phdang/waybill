@@ -31,14 +31,7 @@ export function getLocalDateString(date: Date = new Date()): string {
 export function formatDateTime(date: Date | string | null | undefined): string {
   if (!date) return "N/A";
   
-  let dateObj: Date;
-  if (typeof date === "string") {
-    // Nếu chuỗi chưa có múi giờ, cộng thêm đuôi +07:00 của Việt Nam
-    const formattedStr = date.includes("+") || date.endsWith("Z") ? date : `${date.replace(" ", "T")}+07:00`;
-    dateObj = new Date(formattedStr);
-  } else {
-    dateObj = new Date(date);
-  }
+  const dateObj = new Date(date)
 
   return dateObj.toLocaleString("vi-VN", {
     year: "numeric",

@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, Partials, ActivityType } from "discord.js";
+import { Client, GatewayIntentBits, Partials, ActivityType, AttachmentBuilder } from "discord.js";
 import { logger } from "../logger";
 import { deployCommands } from "./commands";
 import { ExpenseService } from "../services/expense";
@@ -142,6 +142,35 @@ export function startDiscordBot() {
           const tripId = options.getString("id") || undefined;
           const report = await ReportingService.getTripReport(tripId);
           await interaction.editReply(report);
+
+          // Send attachment images for each expense in the trip that has receipts
+          const STORAGE_ROOT = "/home/waybill/storage";
+          const expenseIds = tripId
+            ? await ExpenseService.getExpenseIdsByTrip(tripId)
+            : await (async () => {
+                const active = await ExpenseService.getActiveTrip();
+                return active ? await ExpenseService.getExpenseIdsByTrip(active.id) : [];
+              })();
+
+          let imageCount = 0;
+          for (const expId of expenseIds) {
+            const attList = await ExpenseService.getAttachmentsByExpense(expId);
+            for (const att of attList) {
+              const filePath = path.join(STORAGE_ROOT, att.storageKey);
+              try {
+                const fileBuffer = await fs.promises.readFile(filePath);
+                const fileName = path.basename(att.storageKey);
+                const discordFile = new AttachmentBuilder(fileBuffer, { name: fileName });
+                await interaction.followUp({ files: [discordFile] });
+                imageCount++;
+              } catch (readErr: any) {
+                logger.warn({ storageKey: att.storageKey, error: readErr.message }, "Could not read attachment for trip report");
+              }
+            }
+          }
+          if (imageCount > 0) {
+            logger.info({ tripId, imageCount }, "Sent trip report attachment images");
+          }
         }
       }
 
@@ -178,6 +207,23 @@ export function startDiscordBot() {
             `• Tạo lúc: ${formatDateTime(expense.createdAt)}\n\n` +
             `📎 **Ảnh đính kèm (${attList.length}):**\n${attText}`
           );
+
+          // Send each stored receipt image as a Discord file attachment
+          if (attList.length > 0) {
+            const STORAGE_ROOT = "/home/waybill/storage";
+            for (const att of attList) {
+              const filePath = path.join(STORAGE_ROOT, att.storageKey);
+              try {
+                const fileBuffer = await fs.promises.readFile(filePath);
+                const fileName = path.basename(att.storageKey);
+                const discordFile = new AttachmentBuilder(fileBuffer, { name: fileName });
+                await interaction.followUp({ files: [discordFile] });
+              } catch (readErr: any) {
+                logger.warn({ storageKey: att.storageKey, error: readErr.message }, "Could not read attachment file for expense view");
+                await interaction.followUp(`⚠️ Không thể đọc file: \`${att.storageKey}\``);
+              }
+            }
+          }
         }
 
         // ── EDIT ──────────────────────────────────────────────────────────
@@ -292,6 +338,18 @@ export function startDiscordBot() {
             `• Thêm lúc: ${formatDateTime(saved.createdAt)}\n\n` +
             `_Dùng \`/expense view id:${id}\` để xem danh sách toàn bộ ảnh._`
           );
+
+          // Echo the saved attachment image back to Discord
+          try {
+            const STORAGE_ROOT = "/home/waybill/storage";
+            const filePath = path.join(STORAGE_ROOT, storageKey);
+            const fileBuffer = await fs.promises.readFile(filePath);
+            const fileName = path.basename(storageKey);
+            const discordFile = new AttachmentBuilder(fileBuffer, { name: fileName });
+            await interaction.followUp({ content: `🖼️ Ảnh vừa đính kèm vào **${existing.description}**:`, files: [discordFile] });
+          } catch (readErr: any) {
+            logger.warn({ storageKey, error: readErr.message }, "Could not echo attachment image after attach");
+          }
         }
       }
     } catch (err: any) {
@@ -359,14 +417,27 @@ export function startDiscordBot() {
             const storageKey = await saveAttachmentSafely(buffer, imageAttachment.name, imageAttachment.contentType || "image/jpeg");
             await ExpenseService.addAttachment(expense.id, storageKey, imageAttachment.contentType || "image/jpeg");
 
-            await message.reply(
+            const replyMsg = await message.reply(
               `📸 **Đã quét hóa đơn & ghi nhận chi tiêu!**\n` +
+              `• ID: **${expense.id}**\n` +
               `• Nội dung: **${expense.description}**\n` +
               `• Chi phí: **${formatCurrency(expense.amount, expense.currency)}**\n` +
               `• Phân loại: **${expense.category.toUpperCase()}**\n` +
               `• Ngày: **${formatDateTime(expense.expenseDate)}**\n` +
               `• File: \`${storageKey}\``
             );
+
+            // Echo the saved receipt image back to Discord
+            try {
+              const STORAGE_ROOT = "/home/waybill/storage";
+              const filePath = path.join(STORAGE_ROOT, storageKey);
+              const fileBuffer = await fs.promises.readFile(filePath);
+              const fileName = path.basename(storageKey);
+              const discordFile = new AttachmentBuilder(fileBuffer, { name: fileName });
+              await message.channel.send({ content: `🖼️ Hóa đơn đính kèm cho **${expense.description}**:`, files: [discordFile] });
+            } catch (readErr: any) {
+              logger.warn({ storageKey, error: readErr.message }, "Could not echo receipt image after scan");
+            }
           } else {
             await message.reply("⚠️ Bot không thể nhận diện được hóa đơn chi tiêu này. Vui lòng nhập chi tiết thủ công hoặc thử ảnh khác.");
           }

@@ -270,4 +270,26 @@ export class ExpenseService {
     const [trip] = await db.select().from(trips).where(eq(trips.id, id)).limit(1);
     return trip || null;
   }
+
+  /**
+   * Retrieves expense IDs for a given date (YYYY-MM-DD).
+   */
+  public static async getExpenseIdsByDate(date: string): Promise<string[]> {
+    const rows = await db
+      .select({ id: expenses.id })
+      .from(expenses)
+      .where(eq(expenses.expenseDate, date));
+    return rows.map(r => r.id);
+  }
+
+  /**
+   * Retrieves expense IDs for a given trip.
+   */
+  public static async getExpenseIdsByTrip(tripId: string): Promise<string[]> {
+    const rows = await db
+      .select({ id: expenses.id })
+      .from(expenses)
+      .where(eq(expenses.tripId, tripId));
+    return rows.map(r => r.id);
+  }
 }
