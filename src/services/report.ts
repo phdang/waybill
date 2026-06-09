@@ -166,7 +166,7 @@ export class ReportingService {
       categoryTotals[cat][cur] = (categoryTotals[cat][cur] || 0) + amt;
 
       // Line item text – show full date + HH:mm:ss timestamp + short expense ID
-      const expenseDateTimeStr = `${item.expenseDate} ${new Date(item.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
+      const expenseDateTimeStr = `${formatDateTime(item.expenseDate)}`;
       const expenseId = item.id;
       listText += `• [${expenseDateTimeStr}] **${CATEGORY_EMOJIS[cat] || cat}** - ${item.description}: **${formatCurrency(amt, cur)}**${item.note ? ` (*${item.note}*)` : ""} \` ID: ${expenseId}\`\n`;
     }
@@ -209,16 +209,10 @@ export class ReportingService {
     for (const trip of allTrips) {
       const statusIcon = trip.status === "active" ? "🟢" : "🔴";
       const startStr = trip.startedAt
-        ? new Date(trip.startedAt).toLocaleString("vi-VN", {
-            year: "numeric", month: "2-digit", day: "2-digit",
-            hour: "2-digit", minute: "2-digit", second: "2-digit",
-          })
+        ? formatDateTime(trip.startedAt)
         : "N/A";
       const endStr = trip.endedAt
-        ? new Date(trip.endedAt).toLocaleString("vi-VN", {
-            year: "numeric", month: "2-digit", day: "2-digit",
-            hour: "2-digit", minute: "2-digit", second: "2-digit",
-          })
+        ? formatDateTime(trip.endedAt)
         : null;
 
       listText +=

@@ -364,7 +364,7 @@ export function startDiscordBot() {
               `• Nội dung: **${expense.description}**\n` +
               `• Chi phí: **${formatCurrency(expense.amount, expense.currency)}**\n` +
               `• Phân loại: **${expense.category.toUpperCase()}**\n` +
-              `• Ngày: **${expense.expenseDate}**\n` +
+              `• Ngày: **${formatDateTime(expense.expenseDate)}**\n` +
               `• File: \`${storageKey}\``
             );
           } else {
@@ -402,7 +402,7 @@ export function startDiscordBot() {
             `• Nội dung: **${expense.description}**\n` +
             `• Chi phí: **${formatCurrency(expense.amount, expense.currency)}**\n` +
             `• Phân loại: **${expense.category.toUpperCase()}**\n` +
-            `• Ngày: **${expense.expenseDate}**`
+            `• Ngày: **${formatDateTime(expense.expenseDate)}**`
           );
         }
       } catch (err: any) {
