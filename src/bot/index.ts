@@ -2,7 +2,8 @@ import { Client, GatewayIntentBits, Partials, ActivityType, AttachmentBuilder } 
 import { logger } from "../logger";
 import { deployCommands } from "./commands";
 import { ExpenseService } from "../services/expense";
-import { ReportingService, formatCurrency, formatDateTime } from "../services/report";
+import { ReportingService, formatCurrency } from "../services/report";
+import { formatDateTime } from "../utils/datetime";
 import { AIService } from "../services/ai";
 import * as fs from "fs";
 import * as path from "path";

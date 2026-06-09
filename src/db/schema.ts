@@ -6,9 +6,9 @@ export const trips = pgTable("trips", {
   country: text("country"),
   baseCurrency: text("base_currency"),
   status: text("status").$type<"active" | "completed">().notNull().default("active"),
-  startedAt: timestamp("started_at"),
-  endedAt: timestamp("ended_at"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  startedAt: timestamp("started_at", { withTimezone: true }),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const expenses = pgTable("expenses", {
@@ -20,8 +20,8 @@ export const expenses = pgTable("expenses", {
   description: text("description").notNull(),
   note: text("note"),
   sourceType: text("source_type").$type<"text" | "image" | "voice" | "manual">().notNull().default("manual"),
-  expenseDate: timestamp("expense_date").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expenseDate: timestamp("expense_date", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const attachments = pgTable("attachments", {
@@ -29,5 +29,5 @@ export const attachments = pgTable("attachments", {
   expenseId: uuid("expense_id").notNull().references(() => expenses.id),
   storageKey: text("storage_key").notNull(),
   mimeType: text("mime_type").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });

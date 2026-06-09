@@ -2,6 +2,7 @@ import { db } from "../db/connection";
 import { expenses, trips } from "../db/schema";
 import { eq, desc, gte, lte, and } from "drizzle-orm";
 import { ExpenseService } from "./expense";
+import { VN_TZ, getLocalDateString, getVnDayRange, formatDateTime } from "../utils/datetime";
 
 export function formatCurrency(amount: number | string, currency: string): string {
   const num = typeof amount === "string" ? parseFloat(amount) : amount;
@@ -18,44 +19,6 @@ export function formatCurrency(amount: number | string, currency: string): strin
   return `${num.toLocaleString("en-US")} ${curr}`;
 }
 
-export function getLocalDateString(date: Date = new Date()): string {
-  // Handle timezone offsets to output correct YYYY-MM-DD locally
-  const tzOffset = date.getTimezoneOffset() * 60000; // in ms
-  const localTime = new Date(date.getTime() - tzOffset);
-  return localTime.toISOString().split("T")[0];
-}
-
-/**
- * Formats a Date (or ISO string / timestamp) to full dd/mm/yyyy HH:mm:ss in vi-VN locale.
- */
-export function formatDateTime(date: Date | string | null | undefined): string {
-  if (!date) return "N/A";
-
-  let dateStr = "";
-
-  if (date instanceof Date) {
-    // Nếu ORM trả về đối tượng Date, ta chuyển nó sang chuỗi ISO thô: "2026-06-09T18:01:53.273Z"
-    dateStr = date.toISOString();
-  } else {
-    dateStr = String(date);
-  }
-
-  // Dùng Regex lấy đúng thứ tự các cụm số: Năm, Tháng, Ngày, Giờ, Phút, Giây
-  // Bất chấp chữ T hay chữ Z ở cuối chuỗi
-  const numbers = dateStr.match(/\d+/g);
-  
-  if (!numbers || numbers.length < 6) return "N/A";
-
-  const year = numbers[0];
-  const month = numbers[1];
-  const day = numbers[2];
-  const hour = numbers[3];
-  const minute = numbers[4];
-  const second = numbers[5];
-
-  // Trả về đúng định dạng text bạn mong muốn
-  return `${hour}:${minute}:${second} ${day}/${month}/${year}`;
-}
 
 const CATEGORY_EMOJIS: Record<string, string> = {
   food: "🍴 Food",
@@ -74,14 +37,11 @@ export class ReportingService {
    */
   public static async getTodayReport(): Promise<string> {
     const todayStr = getLocalDateString();
-    const startOfDay = new Date(todayStr);
-    startOfDay.setUTCHours(0, 0, 0, 0);
-    const endOfDay = new Date(todayStr);
-    endOfDay.setUTCHours(23, 59, 59, 999);
+    const { start, end } = getVnDayRange(todayStr);
     const items = await db
       .select()
       .from(expenses)
-      .where(and(gte(expenses.expenseDate, startOfDay), lte(expenses.expenseDate, endOfDay)))
+      .where(and(gte(expenses.expenseDate, start), lte(expenses.expenseDate, end)))
       .orderBy(desc(expenses.createdAt));
 
     if (items.length === 0) {

@@ -2,6 +2,7 @@ import { db } from "../db/connection";
 import { trips, expenses, attachments } from "../db/schema";
 import { eq, desc, and, gte, lte } from "drizzle-orm";
 import { logger } from "../logger";
+import { getVnDayRange } from "../utils/datetime";
 
 export interface CreateTripInput {
   name: string;
@@ -275,14 +276,11 @@ export class ExpenseService {
    * Retrieves expense IDs for a given date (YYYY-MM-DD).
    */
   public static async getExpenseIdsByDate(date: string): Promise<string[]> {
-    const startOfDay = new Date(date);
-    startOfDay.setUTCHours(0, 0, 0, 0);
-    const endOfDay = new Date(date);
-    endOfDay.setUTCHours(23, 59, 59, 999);
+    const { start, end } = getVnDayRange(date);
     const rows = await db
       .select({ id: expenses.id })
       .from(expenses)
-      .where(and(gte(expenses.expenseDate, startOfDay), lte(expenses.expenseDate, endOfDay)));
+      .where(and(gte(expenses.expenseDate, start), lte(expenses.expenseDate, end)));
     return rows.map(r => r.id);
   }
 
