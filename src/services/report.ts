@@ -167,8 +167,8 @@ export class ReportingService {
 
       // Line item text – show full date + HH:mm:ss timestamp + short expense ID
       const expenseDateTimeStr = `${item.expenseDate} ${new Date(item.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
-      const shortId = item.id.slice(-8);
-      listText += `• [${expenseDateTimeStr}] **${CATEGORY_EMOJIS[cat] || cat}** - ${item.description}: **${formatCurrency(amt, cur)}**${item.note ? ` (*${item.note}*)` : ""} \`…${shortId}\`\n`;
+      const expenseId = item.id;
+      listText += `• [${expenseDateTimeStr}] **${CATEGORY_EMOJIS[cat] || cat}** - ${item.description}: **${formatCurrency(amt, cur)}**${item.note ? ` (*${item.note}*)` : ""} \` ID: ${expenseId}\`\n`;
     }
 
     // Compile totals text
