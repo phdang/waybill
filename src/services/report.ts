@@ -31,24 +31,30 @@ export function getLocalDateString(date: Date = new Date()): string {
 export function formatDateTime(date: Date | string | null | undefined): string {
   if (!date) return "N/A";
 
-  // Nếu là Date Object (ví dụ từ thư viện khác), chuyển về chuỗi format ISO local
-  const dateStr = date instanceof Date 
-    ? date.toLocaleString("sv-SE") // Trả về dạng YYYY-MM-DD HH:mm:ss
-    : date;
+  let dateStr = "";
 
-  try {
-    // Regex để bắt các nhóm: năm, tháng, ngày, giờ, phút, giây
-    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})/);
-    
-    if (!match) return "N/A";
-
-    const [, year, month, day, hour, minute, second] = match;
-
-    // Trả về đúng format bạn muốn: HH:mm:ss dd/MM/yyyy
-    return `${hour}:${minute}:${second} ${day}/${month}/${year}`;
-  } catch (e) {
-    return "N/A";
+  if (date instanceof Date) {
+    // Nếu ORM trả về đối tượng Date, ta chuyển nó sang chuỗi ISO thô: "2026-06-09T18:01:53.273Z"
+    dateStr = date.toISOString();
+  } else {
+    dateStr = String(date);
   }
+
+  // Dùng Regex lấy đúng thứ tự các cụm số: Năm, Tháng, Ngày, Giờ, Phút, Giây
+  // Bất chấp chữ T hay chữ Z ở cuối chuỗi
+  const numbers = dateStr.match(/\d+/g);
+  
+  if (!numbers || numbers.length < 6) return "N/A";
+
+  const year = numbers[0];
+  const month = numbers[1];
+  const day = numbers[2];
+  const hour = numbers[3];
+  const minute = numbers[4];
+  const second = numbers[5];
+
+  // Trả về đúng định dạng text bạn mong muốn
+  return `${hour}:${minute}:${second} ${day}/${month}/${year}`;
 }
 
 const CATEGORY_EMOJIS: Record<string, string> = {
@@ -181,7 +187,7 @@ export class ReportingService {
       categoryTotals[cat][cur] = (categoryTotals[cat][cur] || 0) + amt;
 
       // Line item text – show full date + HH:mm:ss timestamp + short expense ID
-      const expenseDateTimeStr = `${formatDateTime(item.expenseDate)}`;
+      const expenseDateTimeStr = formatDateTime(item.expenseDate)
       const expenseId = item.id;
       listText += `• [${expenseDateTimeStr}] **${CATEGORY_EMOJIS[cat] || cat}** - ${item.description}: **${formatCurrency(amt, cur)}**${item.note ? ` (*${item.note}*)` : ""} \` ID: ${expenseId}\`\n`;
     }
