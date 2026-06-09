@@ -74,7 +74,7 @@ app.post("/trips", async (req, res) => {
 // 2. Create an expense manually
 app.post("/expenses", async (req, res) => {
   try {
-    const { amount, currency, category, description, note, trip_id, source_type, expense_date } = req.body;
+    const { amount, currency, category, description, note, trip_id, source_type } = req.body;
     
     if (!amount || !currency || !category || !description) {
       res.status(400).json({
@@ -100,8 +100,7 @@ app.post("/expenses", async (req, res) => {
       description,
       note,
       tripId: trip_id,
-      sourceType: source_type || "manual",
-      expenseDate: expense_date,
+      sourceType: source_type || "manual"
     });
 
     res.status(201).json({ success: true, expense });

@@ -132,7 +132,7 @@ export class ExpenseService {
       }
     }
 
-    const expenseDate = input.expenseDate ? new Date(input.expenseDate) : new Date()
+    const expenseDate = new Date()
 
     const [newExpense] = await db
       .insert(expenses)
@@ -144,7 +144,7 @@ export class ExpenseService {
         description: input.description,
         note: input.note || null,
         sourceType: input.sourceType,
-        expenseDate: expenseDate,
+        expenseDate: expenseDate
       })
       .returning();
 
