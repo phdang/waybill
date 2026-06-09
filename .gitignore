@@ -1,0 +1,77 @@
+# =========================================================================
+# Dependencies & Package Managers
+# =========================================================================
+node_modules/
+/jspm_packages/
+.npm
+.eslintcache
+.stylelintcache
+.tsbuildinfo
+
+# =========================================================================
+# Build & Compilation Outputs (TypeScript/Bundlers)
+# =========================================================================
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# =========================================================================
+# Environment Variables & Secrets (CRITICAL)
+# =========================================================================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# KHÔNG bỏ qua file template này để team biết cấu trúc biến môi trường
+!.env.example
+
+# =========================================================================
+# Logs & Diagnostic Files
+# =========================================================================
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# =========================================================================
+# Operating System & IDE Specific Files
+# =========================================================================
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# =========================================================================
+# Project Specific (Temporary Files, Receipts & Cache)
+# =========================================================================
+# Thư mục tạm thời lưu ảnh hóa đơn khi Discord Bot tải về trước khi OCR xử lý
+/uploads/
+/tmp/
+/temp/
+/cache/
+
+# Dự phòng nếu anh chạy local SQLite để test nhanh (dù dự án dùng Postgres)
+*.db
+*.sqlite
+*.sqlite3
+
+# =========================================================================
+# Testing & Coverage
+# =========================================================================
+coverage/
+.nyc_output/
