@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, numeric, timestamp, date } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, numeric, timestamp } from "drizzle-orm/pg-core";
 
 export const trips = pgTable("trips", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -20,7 +20,7 @@ export const expenses = pgTable("expenses", {
   description: text("description").notNull(),
   note: text("note"),
   sourceType: text("source_type").$type<"text" | "image" | "voice" | "manual">().notNull().default("manual"),
-  expenseDate: date("expense_date").notNull(),
+  expenseDate: timestamp("expense_date").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

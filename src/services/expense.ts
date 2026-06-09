@@ -1,6 +1,6 @@
 import { db } from "../db/connection";
 import { trips, expenses, attachments } from "../db/schema";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, gte, lte } from "drizzle-orm";
 import { logger } from "../logger";
 
 export interface CreateTripInput {
@@ -132,7 +132,7 @@ export class ExpenseService {
       }
     }
 
-    const dateStr = input.expenseDate || new Date().toISOString().split("T")[0];
+    const expenseDate = input.expenseDate ? new Date(input.expenseDate) : new Date()
 
     const [newExpense] = await db
       .insert(expenses)
@@ -144,7 +144,7 @@ export class ExpenseService {
         description: input.description,
         note: input.note || null,
         sourceType: input.sourceType,
-        expenseDate: dateStr,
+        expenseDate: expenseDate,
       })
       .returning();
 
@@ -183,7 +183,7 @@ export class ExpenseService {
     if (input.category !== undefined) updateData.category = input.category;
     if (input.description !== undefined) updateData.description = input.description;
     if (input.note !== undefined) updateData.note = input.note;
-    if (input.expenseDate !== undefined) updateData.expenseDate = input.expenseDate;
+    if (input.expenseDate !== undefined) updateData.expenseDate = new Date(input.expenseDate);
 
     if (Object.keys(updateData).length === 0) {
       return this.getExpenseById(id);
@@ -275,10 +275,14 @@ export class ExpenseService {
    * Retrieves expense IDs for a given date (YYYY-MM-DD).
    */
   public static async getExpenseIdsByDate(date: string): Promise<string[]> {
+    const startOfDay = new Date(date);
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setUTCHours(23, 59, 59, 999);
     const rows = await db
       .select({ id: expenses.id })
       .from(expenses)
-      .where(eq(expenses.expenseDate, date));
+      .where(and(gte(expenses.expenseDate, startOfDay), lte(expenses.expenseDate, endOfDay)));
     return rows.map(r => r.id);
   }
 

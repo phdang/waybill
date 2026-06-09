@@ -1,6 +1,6 @@
 import { db } from "../db/connection";
 import { expenses, trips } from "../db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, gte, lte, and } from "drizzle-orm";
 import { ExpenseService } from "./expense";
 
 export function formatCurrency(amount: number | string, currency: string): string {
@@ -60,10 +60,14 @@ export class ReportingService {
    */
   public static async getTodayReport(): Promise<string> {
     const todayStr = getLocalDateString();
+    const startOfDay = new Date(todayStr);
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    const endOfDay = new Date(todayStr);
+    endOfDay.setUTCHours(23, 59, 59, 999);
     const items = await db
       .select()
       .from(expenses)
-      .where(eq(expenses.expenseDate, todayStr))
+      .where(and(gte(expenses.expenseDate, startOfDay), lte(expenses.expenseDate, endOfDay)))
       .orderBy(desc(expenses.createdAt));
 
     if (items.length === 0) {
